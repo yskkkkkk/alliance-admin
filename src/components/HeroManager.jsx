@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp, Plus, Trash2, List, Table } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 function HeroManager() {
@@ -57,15 +57,16 @@ function HeroManager() {
     fetchData();
   }, []);
 
-  const handleNameChange = async (index, value) => {
+  const handleNameChange = (index, value) => {
     const newNames = [...heroNames];
     newNames[index] = value;
     setHeroNames(newNames);
     localStorage.setItem('kings_shot_hero_names', JSON.stringify(newNames));
-    
-    // Attempt to save to Supabase
+  };
+
+  const handleNameBlur = async () => {
     try {
-      await supabase.from('metadata').upsert({ key: 'hero_names', value: newNames });
+      await supabase.from('metadata').upsert({ key: 'hero_names', value: heroNames });
     } catch (e) {}
   };
 
@@ -103,21 +104,22 @@ function HeroManager() {
     }
   };
 
-  const handleHeroChange = async (memberId, heroIndex, value) => {
-    let updatedMember = null;
+  const handleHeroChange = (memberId, heroIndex, value) => {
     setMembers(members.map(member => {
       if (member.id === memberId) {
         const newHeroes = [...member.heroes];
         newHeroes[heroIndex] = value;
-        updatedMember = { ...member, heroes: newHeroes };
-        return updatedMember;
+        return { ...member, heroes: newHeroes };
       }
       return member;
     }));
+  };
 
-    if (updatedMember) {
+  const handleHeroBlur = async (memberId) => {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
       try {
-        await supabase.from('members').update({ heroes: updatedMember.heroes }).eq('id', memberId);
+        await supabase.from('members').update({ heroes: member.heroes }).eq('id', memberId);
       } catch (err) {}
     }
   };
@@ -223,6 +225,7 @@ function HeroManager() {
                               min="0"
                               value={level}
                               onChange={(e) => handleHeroChange(member.id, index, e.target.value)}
+                              onBlur={() => handleHeroBlur(member.id)}
                               placeholder="Lv."
                             />
                           </div>
@@ -247,26 +250,41 @@ function HeroManager() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
                   <th 
-                    style={{ padding: '12px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    onClick={() => handleSort('name')}
+                    style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
                   >
-                    {t('memberName')} {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                        {t('memberName')}
+                      </span>
+                      <button 
+                        className="btn-icon"
+                        style={{ padding: '4px', opacity: sortConfig.key === 'name' ? 1 : 0.3 }}
+                        onClick={() => handleSort('name')}
+                      >
+                        <ArrowUpDown size={14} />
+                      </button>
+                    </div>
                   </th>
                   {[0, 1, 2, 3, 4, 5].map(index => (
                     <th 
                       key={index}
-                      style={{ padding: '12px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      onClick={() => handleSort(index.toString())}
+                      style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input 
                           type="text" 
                           value={heroNames[index]}
-                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleNameChange(index, e.target.value)}
+                          onBlur={handleNameBlur}
                           style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
                         />
-                        {sortConfig.key === index.toString() && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <button 
+                          className="btn-icon"
+                          style={{ padding: '4px', opacity: sortConfig.key === index.toString() ? 1 : 0.3 }}
+                          onClick={() => handleSort(index.toString())}
+                        >
+                          <ArrowUpDown size={14} />
+                        </button>
                       </div>
                     </th>
                   ))}
