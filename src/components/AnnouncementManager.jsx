@@ -94,7 +94,7 @@ function AnnouncementManager() {
   };
 
   const handleCopy = async (id, title, content, lang) => {
-    const textToCopy = `[${title}]\n\n${content}`;
+    const textToCopy = content;
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopiedId({ id, lang });
