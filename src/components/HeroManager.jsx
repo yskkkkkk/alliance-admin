@@ -1,50 +1,75 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Plus, Trash2, List, Table } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 function HeroManager() {
   const { t } = useTranslation();
   const [members, setMembers] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [newMemberName, setNewMemberName] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'edit' | 'table'
+  const [viewMode, setViewMode] = useState('table');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load from local storage on mount
+  // Fetch data from Supabase
   useEffect(() => {
-    const savedMembers = localStorage.getItem('kings_shot_members');
-    if (savedMembers) {
+    const fetchData = async () => {
       try {
-        setMembers(JSON.parse(savedMembers));
+        const { data, error } = await supabase
+          .from('members')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        if (data) {
+          // parse heroes if it's stringified, though supabase jsonb returns object/array
+          const parsedData = data.map(m => ({
+            ...m,
+            heroes: typeof m.heroes === 'string' ? JSON.parse(m.heroes) : m.heroes
+          }));
+          setMembers(parsedData);
+        }
+
+        const { data: metaData } = await supabase
+          .from('metadata')
+          .select('*')
+          .eq('key', 'hero_names')
+          .single();
+        
+        if (metaData && metaData.value) {
+          setHeroNames(typeof metaData.value === 'string' ? JSON.parse(metaData.value) : metaData.value);
+        } else {
+          // Fallback to local storage if DB empty
+          const savedNames = localStorage.getItem('kings_shot_hero_names');
+          if (savedNames) setHeroNames(JSON.parse(savedNames));
+        }
       } catch (e) {
-        console.error("Failed to parse members data");
+        console.error("Failed to fetch data:", e);
+        // Fallback to local storage
+        const saved = localStorage.getItem('kings_shot_members');
+        if (saved) setMembers(JSON.parse(saved));
+      } finally {
+        setIsLoading(false);
       }
-    }
-    const savedNames = localStorage.getItem('kings_shot_hero_names');
-    if (savedNames) {
-      try {
-        setHeroNames(JSON.parse(savedNames));
-      } catch (e) {}
-    }
+    };
+    fetchData();
   }, []);
 
-  // Save to local storage on change
-  useEffect(() => {
-    localStorage.setItem('kings_shot_members', JSON.stringify(members));
-  }, [members]);
-
-  useEffect(() => {
-    localStorage.setItem('kings_shot_hero_names', JSON.stringify(heroNames));
-  }, [heroNames]);
-
-  const handleNameChange = (index, value) => {
+  const handleNameChange = async (index, value) => {
     const newNames = [...heroNames];
     newNames[index] = value;
     setHeroNames(newNames);
+    localStorage.setItem('kings_shot_hero_names', JSON.stringify(newNames));
+    
+    // Attempt to save to Supabase
+    try {
+      await supabase.from('metadata').upsert({ key: 'hero_names', value: newNames });
+    } catch (e) {}
   };
 
-  const handleAddMember = (e) => {
+  const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMemberName.trim()) return;
     if (members.length >= 100) {
@@ -60,24 +85,41 @@ function HeroManager() {
     
     setMembers([...members, newMember]);
     setNewMemberName('');
-  };
 
-  const handleDeleteMember = (id, e) => {
-    if(e) e.stopPropagation();
-    if(window.confirm(t('delete') + "?")) {
-      setMembers(members.filter(m => m.id !== id));
+    try {
+      await supabase.from('members').insert([newMember]);
+    } catch (err) {
+      console.error("Failed to insert member", err);
     }
   };
 
-  const handleHeroChange = (memberId, heroIndex, value) => {
+  const handleDeleteMember = async (id, e) => {
+    if(e) e.stopPropagation();
+    if(window.confirm(t('delete') + "?")) {
+      setMembers(members.filter(m => m.id !== id));
+      try {
+        await supabase.from('members').delete().eq('id', id);
+      } catch (err) {}
+    }
+  };
+
+  const handleHeroChange = async (memberId, heroIndex, value) => {
+    let updatedMember = null;
     setMembers(members.map(member => {
       if (member.id === memberId) {
         const newHeroes = [...member.heroes];
         newHeroes[heroIndex] = value;
-        return { ...member, heroes: newHeroes };
+        updatedMember = { ...member, heroes: newHeroes };
+        return updatedMember;
       }
       return member;
     }));
+
+    if (updatedMember) {
+      try {
+        await supabase.from('members').update({ heroes: updatedMember.heroes }).eq('id', memberId);
+      } catch (err) {}
+    }
   };
 
   const toggleExpand = (id) => {
@@ -85,7 +127,7 @@ function HeroManager() {
   };
 
   const handleSort = (key) => {
-    let direction = 'desc'; // Default to desc for levels
+    let direction = 'desc';
     if (sortConfig.key === key && sortConfig.direction === 'desc') {
       direction = 'asc';
     }
@@ -100,7 +142,6 @@ function HeroManager() {
       aVal = a.name.toLowerCase();
       bVal = b.name.toLowerCase();
     } else {
-      // It's a hero index
       const index = parseInt(sortConfig.key);
       aVal = parseInt(a.heroes[index]) || 0;
       bVal = parseInt(b.heroes[index]) || 0;
@@ -110,6 +151,10 @@ function HeroManager() {
     if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
   });
+
+  if (isLoading) {
+    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
+  }
 
   return (
     <div className="animate-fade-in">

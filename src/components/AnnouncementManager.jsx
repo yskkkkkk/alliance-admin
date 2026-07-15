@@ -1,38 +1,51 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Plus, Trash2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 function AnnouncementManager() {
   const { t } = useTranslation();
   const [announcements, setAnnouncements] = useState([]);
   const [copiedId, setCopiedId] = useState({ id: null, lang: null });
   const [expandedId, setExpandedId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load from local storage on mount
+  // Load from Supabase on mount
   useEffect(() => {
-    const saved = localStorage.getItem('kings_shot_announcements');
-    if (saved) {
+    const fetchData = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        // Migrate old data if necessary
-        const migrated = parsed.map(ann => ({
-          ...ann,
-          contentKo: ann.contentKo || ann.content || '',
-          contentEn: ann.contentEn || ''
-        }));
-        setAnnouncements(migrated);
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (data) {
+          const mappedData = data.map(ann => ({
+            id: ann.id,
+            title: ann.title || '',
+            contentKo: ann.contentKo || ann.content_ko || '',
+            contentEn: ann.contentEn || ann.content_en || ''
+          }));
+          setAnnouncements(mappedData);
+        }
       } catch (e) {
-        console.error("Failed to parse announcements data");
+        console.error("Failed to fetch announcements:", e);
+        // Fallback to local storage
+        const saved = localStorage.getItem('kings_shot_announcements');
+        if (saved) {
+          try {
+            setAnnouncements(JSON.parse(saved));
+          } catch(err) {}
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    fetchData();
   }, []);
 
-  // Save to local storage on change
-  useEffect(() => {
-    localStorage.setItem('kings_shot_announcements', JSON.stringify(announcements));
-  }, [announcements]);
-
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const newId = Date.now().toString();
     const newAnn = {
       id: newId,
@@ -42,19 +55,37 @@ function AnnouncementManager() {
     };
     setAnnouncements([newAnn, ...announcements]);
     setExpandedId(newId);
+
+    try {
+      await supabase.from('announcements').insert([{ 
+        id: newId, 
+        title: '', 
+        content_ko: '', 
+        content_en: '' 
+      }]);
+    } catch (e) {}
   };
 
-  const handleUpdate = (id, field, value) => {
+  const handleUpdate = async (id, field, value) => {
     setAnnouncements(announcements.map(ann => 
       ann.id === id ? { ...ann, [field]: value } : ann
     ));
+
+    const dbField = field === 'contentKo' ? 'content_ko' : field === 'contentEn' ? 'content_en' : field;
+    try {
+      await supabase.from('announcements').update({ [dbField]: value }).eq('id', id);
+    } catch (e) {}
   };
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
     if(window.confirm(t('delete') + "?")) {
       setAnnouncements(announcements.filter(ann => ann.id !== id));
       if (expandedId === id) setExpandedId(null);
+
+      try {
+        await supabase.from('announcements').delete().eq('id', id);
+      } catch (err) {}
     }
   };
 
@@ -72,6 +103,10 @@ function AnnouncementManager() {
       alert("Failed to copy text. Please try again.");
     }
   };
+
+  if (isLoading) {
+    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
+  }
 
   return (
     <div className="animate-fade-in">
