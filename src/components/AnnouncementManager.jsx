@@ -66,15 +66,23 @@ function AnnouncementManager() {
     } catch (e) {}
   };
 
-  const handleUpdate = async (id, field, value) => {
-    setAnnouncements(announcements.map(ann => 
-      ann.id === id ? { ...ann, [field]: value } : ann
-    ));
+  const handleUpdate = (id, field, value) => {
+    setAnnouncements(announcements.map(ann => {
+      if (ann.id === id) {
+        return { ...ann, [field]: value };
+      }
+      return ann;
+    }));
+  };
 
-    const dbField = field === 'contentKo' ? 'content_ko' : field === 'contentEn' ? 'content_en' : field;
-    try {
-      await supabase.from('announcements').update({ [dbField]: value }).eq('id', id);
-    } catch (e) {}
+  const handleBlur = async (id, field) => {
+    const ann = announcements.find(a => a.id === id);
+    if (ann) {
+      const dbField = field === 'contentKo' ? 'content_ko' : field === 'contentEn' ? 'content_en' : field;
+      try {
+        await supabase.from('announcements').update({ [dbField]: ann[field] }).eq('id', id);
+      } catch (e) {}
+    }
   };
 
   const handleDelete = async (id, e) => {
@@ -134,6 +142,7 @@ function AnnouncementManager() {
                     type="text" 
                     value={ann.title}
                     onChange={(e) => handleUpdate(ann.id, 'title', e.target.value)}
+                    onBlur={() => handleBlur(ann.id, 'title')}
                     placeholder={t('announcementTitle')}
                     style={{ fontWeight: 600, fontSize: '1.05rem', backgroundColor: 'transparent', padding: '4px 0', border: 'none', borderBottom: '1px solid var(--border-color)', borderRadius: 0, width: '100%' }}
                   />
@@ -153,6 +162,7 @@ function AnnouncementManager() {
                     <textarea 
                       value={ann.contentKo}
                       onChange={(e) => handleUpdate(ann.id, 'contentKo', e.target.value)}
+                      onBlur={() => handleBlur(ann.id, 'contentKo')}
                       placeholder={t('contentKo')}
                       style={{ minHeight: '100px' }}
                     />
@@ -163,6 +173,7 @@ function AnnouncementManager() {
                     <textarea 
                       value={ann.contentEn}
                       onChange={(e) => handleUpdate(ann.id, 'contentEn', e.target.value)}
+                      onBlur={() => handleBlur(ann.id, 'contentEn')}
                       placeholder={t('contentEn')}
                       style={{ minHeight: '100px' }}
                     />
