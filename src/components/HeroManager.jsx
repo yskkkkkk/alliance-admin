@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp, Plus, Trash2, List, Table } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 function HeroManager() {
@@ -247,26 +247,40 @@ function HeroManager() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
                   <th 
-                    style={{ padding: '12px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    onClick={() => handleSort('name')}
+                    style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
                   >
-                    {t('memberName')} {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                        {t('memberName')}
+                      </span>
+                      <button 
+                        className="btn-icon"
+                        style={{ padding: '4px', opacity: sortConfig.key === 'name' ? 1 : 0.3 }}
+                        onClick={() => handleSort('name')}
+                      >
+                        <ArrowUpDown size={14} />
+                      </button>
+                    </div>
                   </th>
                   {[0, 1, 2, 3, 4, 5].map(index => (
                     <th 
                       key={index}
-                      style={{ padding: '12px 16px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      onClick={() => handleSort(index.toString())}
+                      style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input 
                           type="text" 
                           value={heroNames[index]}
-                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleNameChange(index, e.target.value)}
                           style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
                         />
-                        {sortConfig.key === index.toString() && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <button 
+                          className="btn-icon"
+                          style={{ padding: '4px', opacity: sortConfig.key === index.toString() ? 1 : 0.3 }}
+                          onClick={() => handleSort(index.toString())}
+                        >
+                          <ArrowUpDown size={14} />
+                        </button>
                       </div>
                     </th>
                   ))}
