@@ -27,7 +27,11 @@ const resources = {
       "noAnnouncements": "No announcements added yet.",
       "viewModeEdit": "Edit View",
       "viewModeTable": "Table View",
-      "sortByLevel": "Sort by Level"
+      "sortByLevel": "Sort by Level",
+      "helpTitle": "How to Use",
+      "help1": "💡 Hero Mgmt: In [Table View], tap column headers like 'Hero 1' to rename them.",
+      "help2": "💡 Sorting: Tap any column header in Table View to sort by that hero's level.",
+      "help3": "💡 Announcements: Save KO and EN content together, and copy them individually using the buttons below."
     }
   },
   ko: {
@@ -55,7 +59,11 @@ const resources = {
       "noAnnouncements": "아직 작성된 공지사항이 없습니다.",
       "viewModeEdit": "편집 모드",
       "viewModeTable": "테이블 모드",
-      "sortByLevel": "레벨 정렬"
+      "sortByLevel": "레벨 정렬",
+      "helpTitle": "앱 사용 방법",
+      "help1": "💡 영웅 관리: [테이블 모드]에서 'Hero 1' 등 열 제목을 터치하면 영웅 이름을 바꿀 수 있습니다.",
+      "help2": "💡 정렬 기능: 테이블 모드의 열 제목을 터치하여 해당 영웅 레벨 기준으로 정렬이 가능합니다.",
+      "help3": "💡 공지사항: 한국어/영어 내용을 한곳에 저장하고, 하단의 개별 복사 버튼으로 원하는 언어만 즉시 복사하세요."
     }
   }
 };
