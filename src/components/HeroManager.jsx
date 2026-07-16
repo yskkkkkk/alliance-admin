@@ -354,12 +354,17 @@ function HeroManager({ isAdmin }) {
                           <div key={index} className="input-group">
                             <label>{heroNames[index]}</label>
                             <input 
-                              type="number" 
-                              min="0"
+                              type="text" 
+                              inputMode="numeric"
+                              maxLength="1"
                               value={level}
-                              onChange={(e) => handleHeroChange(member.id, index, e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^1-5]/g, '');
+                                handleHeroChange(member.id, index, val);
+                              }}
                               onBlur={() => handleHeroBlur(member.id)}
-                              placeholder="Lv."
+                              placeholder="성급"
+                              style={{ textAlign: 'center' }}
                             />
                           </div>
                         ))}
