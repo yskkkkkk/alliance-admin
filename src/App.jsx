@@ -8,9 +8,9 @@ import AnnouncementManager from './components/AnnouncementManager';
 function App() {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('heroes'); // 'heroes' | 'announcements'
-  const [theme, setTheme] = useState(localStorage.getItem('kings_shot_theme') || 'dark');
+  const [theme, setTheme] = useState(localStorage.getItem('kings_shot_theme') || 'light');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('kings_shot_isAdmin') === 'true');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminError, setAdminError] = useState('');
@@ -39,6 +39,7 @@ function App() {
       if (error) throw error;
       if (data) {
         setIsAdmin(true);
+        sessionStorage.setItem('kings_shot_isAdmin', 'true');
         setIsAdminLoginOpen(false);
         setAdminPasscode('');
         setAdminError('');
@@ -61,8 +62,15 @@ function App() {
       <header className="header">
         <h1>{t('appTitle')}</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="btn-icon" onClick={() => isAdmin ? setIsAdmin(false) : setIsAdminLoginOpen(true)} aria-label="Admin">
-            {isAdmin ? <Unlock size={20} color="var(--color-success-fg)" /> : <Lock size={20} />}
+          <button className="btn-icon" onClick={() => {
+            if (isAdmin) {
+              setIsAdmin(false);
+              sessionStorage.removeItem('kings_shot_isAdmin');
+            } else {
+              setIsAdminLoginOpen(true);
+            }
+          }} aria-label="Admin">
+            {isAdmin ? <Unlock size={20} color="var(--success-color)" /> : <Lock size={20} />}
           </button>
           <button className="btn-icon" onClick={toggleHelp} aria-label="Help">
             <HelpCircle size={20} />

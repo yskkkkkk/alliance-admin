@@ -81,6 +81,7 @@ function HeroManager({ isAdmin }) {
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
   const [saveStatus, setSaveStatus] = useState('');
   const [showTrash, setShowTrash] = useState(false);
+  const [multiSortKeys, setMultiSortKeys] = useState([]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -264,29 +265,45 @@ function HeroManager({ isAdmin }) {
   };
 
   const handleSort = (key) => {
+    if (key !== 'name') {
+      if (multiSortKeys.includes(key)) {
+        setMultiSortKeys(multiSortKeys.filter(k => k !== key));
+      } else {
+        setMultiSortKeys([...multiSortKeys, key]);
+      }
+      setSortConfig({ key: null, direction: 'asc' });
+      return;
+    }
+
     let direction = 'desc';
     if (sortConfig.key === key && sortConfig.direction === 'desc') {
       direction = 'asc';
     }
     setSortConfig({ key, direction });
+    setMultiSortKeys([]);
   };
 
   const filteredMembers = members.filter(m => showTrash ? !!m.deleted_at : !m.deleted_at);
   const sortedMembers = [...filteredMembers].sort((a, b) => {
-    if (sortConfig.key === null) return 0;
-    
-    let aVal, bVal;
     if (sortConfig.key === 'name') {
-      aVal = a.name.toLowerCase();
-      bVal = b.name.toLowerCase();
-    } else {
-      const index = parseInt(sortConfig.key);
-      aVal = parseInt(a.heroes[index]) || 0;
-      bVal = parseInt(b.heroes[index]) || 0;
+      let aVal = a.name.toLowerCase();
+      let bVal = b.name.toLowerCase();
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
     }
 
-    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    if (multiSortKeys.length > 0) {
+      let aSum = 0;
+      let bSum = 0;
+      multiSortKeys.forEach(k => {
+        const index = parseInt(k);
+        aSum += (parseInt(a.heroes[index]) || 0);
+        bSum += (parseInt(b.heroes[index]) || 0);
+      });
+      return bSum - aSum;
+    }
+
     return 0;
   });
 
@@ -322,33 +339,39 @@ function HeroManager({ isAdmin }) {
           {isAdmin && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className={`btn ${showTrash ? 'btn-primary' : ''}`} onClick={() => { setShowTrash(!showTrash); setViewMode('edit'); }} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                {showTrash ? '돌아가기' : '🗑️ 휴지통'}
+                {showTrash ? '돌아가기' : <>🗑️ <span className="hide-on-mobile-sm">휴지통</span></>}
               </button>
               <button className="btn" onClick={handleRollback} style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <RotateCcw size={14} /> 롤백 (스냅샷)
+                <RotateCcw size={14} /> <span className="hide-on-mobile-sm">롤백</span>
               </button>
             </div>
           )}
         </div>
         
-        {isAdmin && (
-          <div className="tabs" style={{ margin: 0, padding: '4px' }}>
-            <div 
-              className={`tab ${viewMode === 'edit' ? 'active' : ''}`}
-              onClick={() => { setViewMode('edit'); setShowTrash(false); }}
-              style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <List size={16} /> {t('viewModeEdit')}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {isAdmin && (
+            <div className="tabs" style={{ margin: 0, padding: '4px' }}>
+              <div 
+                className={`tab ${viewMode === 'edit' ? 'active' : ''}`}
+                onClick={() => { setViewMode('edit'); setShowTrash(false); }}
+                style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <List size={16} /> 
+                <span className="hide-on-mobile-lg">{t('viewModeEdit')}</span>
+                <span className="show-on-mobile-lg">편집</span>
+              </div>
+              <div 
+                className={`tab ${viewMode === 'table' ? 'active' : ''}`}
+                onClick={() => setViewMode('table')}
+                style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Table size={16} /> 
+                <span className="hide-on-mobile-lg">{t('viewModeTable')}</span>
+                <span className="show-on-mobile-lg">테이블</span>
+              </div>
             </div>
-            <div 
-              className={`tab ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
-              style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Table size={16} /> {t('viewModeTable')}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {viewMode === 'edit' ? (
@@ -459,26 +482,39 @@ function HeroManager({ isAdmin }) {
                       left: 0,
                       backgroundColor: 'var(--bg-tertiary)',
                       zIndex: 10,
-                      boxShadow: '1px 0 0 0 var(--border-color)'
+                      boxShadow: '1px 0 0 0 var(--border-color)',
+                      cursor: 'pointer',
+                      borderBottom: sortConfig.key === 'name' ? '2px solid #0969da' : 'none'
                     }}
+                    onClick={() => handleSort('name')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
-                        {t('memberName')}
-                      </span>
+                      <span>{t('memberName')}</span>
                       <button 
                         className="btn-icon"
-                        style={{ padding: '4px', opacity: sortConfig.key === 'name' ? 1 : 0.3 }}
-                        onClick={() => handleSort('name')}
+                        style={{ 
+                          padding: '4px', 
+                          opacity: sortConfig.key === 'name' ? 1 : 0.3,
+                          color: sortConfig.key === 'name' ? '#0969da' : 'inherit'
+                        }}
                       >
                         <ArrowUpDown size={14} />
                       </button>
                     </div>
                   </th>
-                  {[0, 1, 2, 3, 4, 5].map(index => (
+                  {[0, 1, 2, 3, 4, 5].map(index => {
+                    const isMultiSelected = multiSortKeys.includes(index.toString());
+                    return (
                     <th 
                       key={index}
-                      style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
+                      style={{ 
+                        padding: '12px 16px', 
+                        whiteSpace: 'nowrap',
+                        backgroundColor: isMultiSelected ? 'rgba(9, 105, 218, 0.1)' : 'transparent',
+                        borderBottom: isMultiSelected ? '2px solid #0969da' : 'none',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => handleSort(index.toString())}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {isAdmin ? (
@@ -487,21 +523,25 @@ function HeroManager({ isAdmin }) {
                             value={heroNames[index]}
                             onChange={(e) => handleNameChange(index, e.target.value)}
                             onBlur={handleNameBlur}
-                            style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: 0, outline: 'none' }}
                           />
                         ) : (
                           <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>{heroNames[index]}</span>
                         )}
                         <button 
                           className="btn-icon"
-                          style={{ padding: '4px', opacity: sortConfig.key === index.toString() ? 1 : 0.3 }}
-                          onClick={() => handleSort(index.toString())}
+                          style={{ 
+                            padding: '4px', 
+                            opacity: isMultiSelected ? 1 : 0.3,
+                            color: isMultiSelected ? '#0969da' : 'inherit'
+                          }}
                         >
-                          <ArrowUpDown size={14} />
+                          {isMultiSelected ? <Plus size={14} /> : <ArrowUpDown size={14} />}
                         </button>
                       </div>
                     </th>
-                  ))}
+                  )})}
                 </tr>
               </thead>
               <tbody>
@@ -518,17 +558,7 @@ function HeroManager({ isAdmin }) {
                       boxShadow: '1px 0 0 0 var(--border-color)'
                     }}
                   >
-                    {isAdmin && !showTrash ? (
-                      <input 
-                        type="text" 
-                        value={member.name}
-                        onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
-                        onBlur={() => handleMemberNameBlur(member.id)}
-                        style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem', width: '120px' }}
-                      />
-                    ) : (
-                      member.name
-                    )}
+                    {member.name}
                   </td>
                     {member.heroes.map((level, index) => (
                       <td key={index} style={{ padding: '12px 16px', color: level ? 'var(--text-primary)' : 'var(--text-secondary)' }}>

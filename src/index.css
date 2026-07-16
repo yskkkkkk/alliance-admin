@@ -89,6 +89,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .btn:hover {
@@ -327,4 +328,32 @@ table th, table td {
   position: absolute;
   top: 16px;
   right: 16px;
+}
+
+/* Responsive Utilities */
+.hide-on-mobile-lg, .hide-on-mobile-sm {
+  display: inline;
+}
+.show-on-mobile-lg, .show-on-mobile-sm {
+  display: none;
+}
+
+/* Stage 1: Hide "모드" text at 480px */
+@media (max-width: 480px) {
+  .hide-on-mobile-lg {
+    display: none !important;
+  }
+  .show-on-mobile-lg {
+    display: inline !important;
+  }
+}
+
+/* Stage 2: Iconify buttons at 400px */
+@media (max-width: 400px) {
+  .hide-on-mobile-sm {
+    display: none !important;
+  }
+  .show-on-mobile-sm {
+    display: inline !important;
+  }
 }
