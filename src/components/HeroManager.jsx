@@ -520,7 +520,7 @@ function HeroManager({ isAdmin }) {
                             onChange={(e) => handleNameChange(index, e.target.value)}
                             onBlur={handleNameBlur}
                             onClick={(e) => e.stopPropagation()}
-                            style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
+                            style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: 0, outline: 'none' }}
                           />
                         ) : (
                           <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>{heroNames[index]}</span>
@@ -560,7 +560,7 @@ function HeroManager({ isAdmin }) {
                         value={member.name}
                         onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
                         onBlur={() => handleMemberNameBlur(member.id)}
-                        style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem', width: '120px' }}
+                        style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem', width: '100%', minWidth: '80px', padding: '0', margin: '0' }}
                       />
                     ) : (
                       member.name

@@ -70,7 +70,7 @@ function App() {
               setIsAdminLoginOpen(true);
             }
           }} aria-label="Admin">
-            {isAdmin ? <Unlock size={20} color="var(--color-success-fg)" /> : <Lock size={20} />}
+            {isAdmin ? <Unlock size={20} color="var(--success-color)" /> : <Lock size={20} />}
           </button>
           <button className="btn-icon" onClick={toggleHelp} aria-label="Help">
             <HelpCircle size={20} />
