@@ -12,6 +12,12 @@ function HeroManager() {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
   const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('');
+
+  const triggerSaveSuccess = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus(''), 2000);
+  };
 
   // Fetch data from Supabase
   useEffect(() => {
@@ -65,9 +71,13 @@ function HeroManager() {
   };
 
   const handleNameBlur = async () => {
+    setSaveStatus('saving');
     try {
       await supabase.from('metadata').upsert({ key: 'hero_names', value: heroNames });
-    } catch (e) {}
+      triggerSaveSuccess();
+    } catch (e) {
+      setSaveStatus('');
+    }
   };
 
   const handleAddMember = async (e) => {
@@ -118,9 +128,13 @@ function HeroManager() {
   const handleHeroBlur = async (memberId) => {
     const member = members.find(m => m.id === memberId);
     if (member) {
+      setSaveStatus('saving');
       try {
         await supabase.from('members').update({ heroes: member.heroes }).eq('id', memberId);
-      } catch (err) {}
+        triggerSaveSuccess();
+      } catch (err) {
+        setSaveStatus('');
+      }
     }
   };
 
@@ -159,7 +173,28 @@ function HeroManager() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ position: 'relative' }}>
+      {saveStatus && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          background: saveStatus === 'saving' ? '#0969da' : '#2da44e',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          fontWeight: 'bold',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          {saveStatus === 'saving' ? '🔄 저장 중...' : '✔ 저장 완료'}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '8px' }}>
         <div className="tabs" style={{ margin: 0, padding: '4px' }}>
           <div 
@@ -250,7 +285,15 @@ function HeroManager() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
                   <th 
-                    style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
+                    style={{ 
+                      padding: '12px 16px', 
+                      whiteSpace: 'nowrap',
+                      position: 'sticky',
+                      left: 0,
+                      backgroundColor: 'var(--bg-tertiary)',
+                      zIndex: 10,
+                      boxShadow: '1px 0 0 0 var(--border-color)'
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
@@ -293,7 +336,19 @@ function HeroManager() {
               <tbody>
                 {sortedMembers.map((member, i) => (
                   <tr key={member.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'transparent' : 'var(--bg-tertiary)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 500 }}>{member.name}</td>
+                    <td 
+                    style={{ 
+                      padding: '12px 16px', 
+                      position: 'sticky', 
+                      left: 0, 
+                      backgroundColor: i % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-tertiary)', 
+                      zIndex: 5,
+                      fontWeight: 600,
+                      boxShadow: '1px 0 0 0 var(--border-color)'
+                    }}
+                  >
+                    {member.name}
+                  </td>
                     {member.heroes.map((level, index) => (
                       <td key={index} style={{ padding: '12px 16px', color: level ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                         {level || '-'}
