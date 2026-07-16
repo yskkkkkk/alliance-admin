@@ -339,10 +339,10 @@ function HeroManager({ isAdmin }) {
           {isAdmin && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className={`btn ${showTrash ? 'btn-primary' : ''}`} onClick={() => { setShowTrash(!showTrash); setViewMode('edit'); }} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                {showTrash ? '돌아가기' : <>🗑️ <span className="hide-on-mobile">휴지통</span></>}
+                {showTrash ? '돌아가기' : <>🗑️ <span className="hide-on-mobile-sm">휴지통</span></>}
               </button>
               <button className="btn" onClick={handleRollback} style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <RotateCcw size={14} /> <span className="hide-on-mobile">롤백</span>
+                <RotateCcw size={14} /> <span className="hide-on-mobile-sm">롤백</span>
               </button>
             </div>
           )}
@@ -357,8 +357,8 @@ function HeroManager({ isAdmin }) {
                 style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <List size={16} /> 
-                <span className="hide-on-mobile">{t('viewModeEdit')}</span>
-                <span className="show-on-mobile">편집</span>
+                <span className="hide-on-mobile-lg">{t('viewModeEdit')}</span>
+                <span className="show-on-mobile-lg">편집</span>
               </div>
               <div 
                 className={`tab ${viewMode === 'table' ? 'active' : ''}`}
@@ -366,8 +366,8 @@ function HeroManager({ isAdmin }) {
                 style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <Table size={16} /> 
-                <span className="hide-on-mobile">{t('viewModeTable')}</span>
-                <span className="show-on-mobile">테이블</span>
+                <span className="hide-on-mobile-lg">{t('viewModeTable')}</span>
+                <span className="show-on-mobile-lg">테이블</span>
               </div>
             </div>
           )}
