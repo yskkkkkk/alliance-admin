@@ -180,6 +180,25 @@ function HeroManager({ isAdmin }) {
     }
   };
 
+  const handleMemberNameChange = (memberId, value) => {
+    setMembers(members.map(member => 
+      member.id === memberId ? { ...member, name: value } : member
+    ));
+  };
+
+  const handleMemberNameBlur = async (memberId) => {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+      setSaveStatus('saving');
+      try {
+        await supabase.from('members').update({ name: member.name }).eq('id', memberId);
+        triggerSaveSuccess();
+      } catch (err) {
+        setSaveStatus('');
+      }
+    }
+  };
+
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
@@ -300,7 +319,18 @@ function HeroManager({ isAdmin }) {
               members.map(member => (
                 <div key={member.id} className="card">
                   <div className="hero-header" onClick={() => toggleExpand(member.id)}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{member.name}</h3>
+                    {isAdmin && !showTrash ? (
+                      <input 
+                        type="text" 
+                        value={member.name}
+                        onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
+                        onBlur={() => handleMemberNameBlur(member.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontSize: '1.05rem', fontWeight: 600, backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', width: '200px' }}
+                      />
+                    ) : (
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{member.name}</h3>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       {showTrash ? (
                         <button className="btn btn-primary" onClick={(e) => handleRestoreMember(member.id, e)} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
@@ -419,7 +449,17 @@ function HeroManager({ isAdmin }) {
                       boxShadow: '1px 0 0 0 var(--border-color)'
                     }}
                   >
-                    {member.name}
+                    {isAdmin && !showTrash ? (
+                      <input 
+                        type="text" 
+                        value={member.name}
+                        onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
+                        onBlur={() => handleMemberNameBlur(member.id)}
+                        style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem', width: '120px' }}
+                      />
+                    ) : (
+                      member.name
+                    )}
                   </td>
                     {member.heroes.map((level, index) => (
                       <td key={index} style={{ padding: '12px 16px', color: level ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
