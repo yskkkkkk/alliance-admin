@@ -3,13 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Copy, Plus, Trash2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-function AnnouncementManager() {
+function AnnouncementManager({ isAdmin }) {
   const { t } = useTranslation();
   const [announcements, setAnnouncements] = useState([]);
   const [copiedId, setCopiedId] = useState({ id: null, lang: null });
   const [expandedId, setExpandedId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
+  const [showTrash, setShowTrash] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) setShowTrash(false);
+  }, [isAdmin]);
 
   const triggerSaveSuccess = () => {
     setSaveStatus('saved');
@@ -31,7 +36,8 @@ function AnnouncementManager() {
             id: ann.id,
             title: ann.title || '',
             contentKo: ann.contentKo || ann.content_ko || '',
-            contentEn: ann.contentEn || ann.content_en || ''
+            contentEn: ann.contentEn || ann.content_en || '',
+            deleted_at: ann.deleted_at
           }));
           setAnnouncements(mappedData);
         }
@@ -98,13 +104,22 @@ function AnnouncementManager() {
   const handleDelete = async (id, e) => {
     e.stopPropagation();
     if(window.confirm(t('delete') + "?")) {
-      setAnnouncements(announcements.filter(ann => ann.id !== id));
+      const now = new Date().toISOString();
+      setAnnouncements(announcements.map(ann => ann.id === id ? { ...ann, deleted_at: now } : ann));
       if (expandedId === id) setExpandedId(null);
 
       try {
-        await supabase.from('announcements').delete().eq('id', id);
+        await supabase.from('announcements').update({ deleted_at: now }).eq('id', id);
       } catch (err) {}
     }
+  };
+
+  const handleRestore = async (id, e) => {
+    e.stopPropagation();
+    setAnnouncements(announcements.map(ann => ann.id === id ? { ...ann, deleted_at: null } : ann));
+    try {
+      await supabase.from('announcements').update({ deleted_at: null }).eq('id', id);
+    } catch (err) {}
   };
 
   const toggleExpand = (id) => {
@@ -125,6 +140,14 @@ function AnnouncementManager() {
   if (isLoading) {
     return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
   }
+
+  const activeAnnouncements = announcements.filter(ann => {
+    if (!ann.deleted_at) return !showTrash;
+    const deletedDate = new Date(ann.deleted_at);
+    const diffDays = (new Date() - deletedDate) / (1000 * 60 * 60 * 24);
+    if (diffDays > 7) return false;
+    return showTrash;
+  });
 
   return (
     <div className="animate-fade-in" style={{ position: 'relative' }}>
@@ -149,18 +172,27 @@ function AnnouncementManager() {
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <button className="btn btn-primary" onClick={handleAdd}>
-          <Plus size={18} /> {t('newAnnouncement')}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {isAdmin && (
+            <>
+              <button className="btn btn-primary" onClick={handleAdd}>
+                <Plus size={18} /> {t('newAnnouncement')}
+              </button>
+              <button className={`btn ${showTrash ? 'btn-primary' : ''}`} onClick={() => setShowTrash(!showTrash)}>
+                {showTrash ? '돌아가기' : '🗑️ 휴지통'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="announcements-list">
-        {announcements.length === 0 ? (
+        {activeAnnouncements.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
             {t('noAnnouncements')}
           </div>
         ) : (
-          announcements.map(ann => (
+          activeAnnouncements.map(ann => (
             <div key={ann.id} className="card">
               <div 
                 className="hero-header" 
@@ -168,19 +200,31 @@ function AnnouncementManager() {
                 style={{ paddingBottom: expandedId === ann.id ? '16px' : '0' }}
               >
                 <div style={{ flex: 1, marginRight: '12px' }} onClick={e => e.stopPropagation()}>
-                  <input 
-                    type="text" 
-                    value={ann.title}
-                    onChange={(e) => handleUpdate(ann.id, 'title', e.target.value)}
-                    onBlur={() => handleBlur(ann.id, 'title')}
-                    placeholder={t('announcementTitle')}
-                    style={{ fontWeight: 600, fontSize: '1.05rem', backgroundColor: 'transparent', padding: '4px 0', border: 'none', borderBottom: '1px solid var(--border-color)', borderRadius: 0, width: '100%' }}
-                  />
+                  {isAdmin ? (
+                    <input 
+                      type="text" 
+                      value={ann.title}
+                      onChange={(e) => handleUpdate(ann.id, 'title', e.target.value)}
+                      onBlur={() => handleBlur(ann.id, 'title')}
+                      placeholder={t('announcementTitle')}
+                      style={{ fontWeight: 600, fontSize: '1.05rem', backgroundColor: 'transparent', padding: '4px 0', border: 'none', borderBottom: '1px solid var(--border-color)', borderRadius: 0, width: '100%', color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{ann.title}</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <button className="btn-icon" onClick={(e) => handleDelete(ann.id, e)}>
-                    <Trash2 size={18} />
-                  </button>
+                  {showTrash ? (
+                    <button className="btn btn-primary" onClick={(e) => handleRestore(ann.id, e)} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
+                      ↺ 복구
+                    </button>
+                  ) : (
+                    isAdmin && (
+                      <button className="btn-icon" onClick={(e) => handleDelete(ann.id, e)}>
+                        <Trash2 size={18} />
+                      </button>
+                    )
+                  )}
                   {expandedId === ann.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
               </div>
@@ -189,24 +233,36 @@ function AnnouncementManager() {
                 <div className="hero-body animate-fade-in" style={{ marginTop: 0, paddingTop: '16px' }}>
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{t('contentKo')}</label>
-                    <textarea 
-                      value={ann.contentKo}
-                      onChange={(e) => handleUpdate(ann.id, 'contentKo', e.target.value)}
-                      onBlur={() => handleBlur(ann.id, 'contentKo')}
-                      placeholder={t('contentKo')}
-                      style={{ minHeight: '100px' }}
-                    />
+                    {isAdmin ? (
+                      <textarea 
+                        value={ann.contentKo}
+                        onChange={(e) => handleUpdate(ann.id, 'contentKo', e.target.value)}
+                        onBlur={() => handleBlur(ann.id, 'contentKo')}
+                        placeholder={t('contentKo')}
+                        style={{ minHeight: '100px' }}
+                      />
+                    ) : (
+                      <div style={{ minHeight: '100px', whiteSpace: 'pre-wrap', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+                        {ann.contentKo}
+                      </div>
+                    )}
                   </div>
                   
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{t('contentEn')}</label>
-                    <textarea 
-                      value={ann.contentEn}
-                      onChange={(e) => handleUpdate(ann.id, 'contentEn', e.target.value)}
-                      onBlur={() => handleBlur(ann.id, 'contentEn')}
-                      placeholder={t('contentEn')}
-                      style={{ minHeight: '100px' }}
-                    />
+                    {isAdmin ? (
+                      <textarea 
+                        value={ann.contentEn}
+                        onChange={(e) => handleUpdate(ann.id, 'contentEn', e.target.value)}
+                        onBlur={() => handleBlur(ann.id, 'contentEn')}
+                        placeholder={t('contentEn')}
+                        style={{ minHeight: '100px' }}
+                      />
+                    ) : (
+                      <div style={{ minHeight: '100px', whiteSpace: 'pre-wrap', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+                        {ann.contentEn}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
