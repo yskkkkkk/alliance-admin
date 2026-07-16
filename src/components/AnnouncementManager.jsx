@@ -21,7 +21,6 @@ function AnnouncementManager({ isAdmin }) {
   const [announcements, setAnnouncements] = useState([]);
   const [copiedId, setCopiedId] = useState({ id: null, lang: null });
   const [expandedId, setExpandedId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
   const [showTrash, setShowTrash] = useState(false);
 

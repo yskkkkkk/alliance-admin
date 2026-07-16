@@ -64,7 +64,6 @@ function HeroManager({ isAdmin }) {
   const [viewMode, setViewMode] = useState('table');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
   const [showTrash, setShowTrash] = useState(false);
 
