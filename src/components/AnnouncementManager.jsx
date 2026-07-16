@@ -9,6 +9,12 @@ function AnnouncementManager() {
   const [copiedId, setCopiedId] = useState({ id: null, lang: null });
   const [expandedId, setExpandedId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('');
+
+  const triggerSaveSuccess = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus(''), 2000);
+  };
 
   // Load from Supabase on mount
   useEffect(() => {
@@ -79,9 +85,13 @@ function AnnouncementManager() {
     const ann = announcements.find(a => a.id === id);
     if (ann) {
       const dbField = field === 'contentKo' ? 'content_ko' : field === 'contentEn' ? 'content_en' : field;
+      setSaveStatus('saving');
       try {
         await supabase.from('announcements').update({ [dbField]: ann[field] }).eq('id', id);
-      } catch (e) {}
+        triggerSaveSuccess();
+      } catch (e) {
+        setSaveStatus('');
+      }
     }
   };
 
@@ -117,8 +127,28 @@ function AnnouncementManager() {
   }
 
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+    <div className="animate-fade-in" style={{ position: 'relative' }}>
+      {saveStatus && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          background: saveStatus === 'saving' ? '#0969da' : '#2da44e',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          fontWeight: 'bold',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          {saveStatus === 'saving' ? '🔄 저장 중...' : '✔ 저장 완료'}
+        </div>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <button className="btn btn-primary" onClick={handleAdd}>
           <Plus size={18} /> {t('newAnnouncement')}
         </button>
