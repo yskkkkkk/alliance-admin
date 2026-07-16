@@ -8,7 +8,7 @@ import AnnouncementManager from './components/AnnouncementManager';
 function App() {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('heroes'); // 'heroes' | 'announcements'
-  const [theme, setTheme] = useState(localStorage.getItem('kings_shot_theme') || 'dark');
+  const [theme, setTheme] = useState(localStorage.getItem('kings_shot_theme') || 'light');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('kings_shot_isAdmin') === 'true');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
