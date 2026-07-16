@@ -104,7 +104,12 @@ function App() {
         </div>
 
         <div className="tab-content">
-          {activeTab === 'heroes' ? <HeroManager isAdmin={isAdmin} /> : <AnnouncementManager isAdmin={isAdmin} />}
+          <div style={{ display: activeTab === 'heroes' ? 'block' : 'none' }}>
+            <HeroManager isAdmin={isAdmin} />
+          </div>
+          <div style={{ display: activeTab === 'announcements' ? 'block' : 'none' }}>
+            <AnnouncementManager isAdmin={isAdmin} />
+          </div>
         </div>
       </main>
 
