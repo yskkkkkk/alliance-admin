@@ -342,7 +342,7 @@ function HeroManager({ isAdmin }) {
                 {showTrash ? '돌아가기' : '🗑️ 휴지통'}
               </button>
               <button className="btn" onClick={handleRollback} style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <RotateCcw size={14} /> 롤백 (스냅샷)
+                <RotateCcw size={14} /> 롤백
               </button>
             </div>
           )}
@@ -554,17 +554,7 @@ function HeroManager({ isAdmin }) {
                       boxShadow: '1px 0 0 0 var(--border-color)'
                     }}
                   >
-                    {isAdmin && !showTrash ? (
-                      <input 
-                        type="text" 
-                        value={member.name}
-                        onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
-                        onBlur={() => handleMemberNameBlur(member.id)}
-                        style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem', width: '100%', minWidth: '80px', padding: '0', margin: '0' }}
-                      />
-                    ) : (
-                      member.name
-                    )}
+                    {member.name}
                   </td>
                     {member.heroes.map((level, index) => (
                       <td key={index} style={{ padding: '12px 16px', color: level ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
