@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown, RotateCcw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-function HeroManager() {
+function HeroManager({ isAdmin }) {
   const { t } = useTranslation();
   const [members, setMembers] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
@@ -13,6 +13,22 @@ function HeroManager() {
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
+  const [showTrash, setShowTrash] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setViewMode('table');
+      setShowTrash(false);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const handleAdminLogin = () => {
+      localStorage.setItem('kings_shot_snapshot_members', JSON.stringify(members));
+    };
+    window.addEventListener('adminLoggedIn', handleAdminLogin);
+    return () => window.removeEventListener('adminLoggedIn', handleAdminLogin);
+  }, [members]);
 
   const triggerSaveSuccess = () => {
     setSaveStatus('saved');
@@ -107,10 +123,36 @@ function HeroManager() {
   const handleDeleteMember = async (id, e) => {
     if(e) e.stopPropagation();
     if(window.confirm(t('delete') + "?")) {
-      setMembers(members.filter(m => m.id !== id));
+      const now = new Date().toISOString();
+      setMembers(members.map(m => m.id === id ? { ...m, deleted_at: now } : m));
       try {
-        await supabase.from('members').delete().eq('id', id);
+        await supabase.from('members').update({ deleted_at: now }).eq('id', id);
       } catch (err) {}
+    }
+  };
+
+  const handleRestoreMember = async (id, e) => {
+    if(e) e.stopPropagation();
+    setMembers(members.map(m => m.id === id ? { ...m, deleted_at: null } : m));
+    try {
+      await supabase.from('members').update({ deleted_at: null }).eq('id', id);
+    } catch (err) {}
+  };
+
+  const handleRollback = async () => {
+    if (window.confirm('정말 관리자 로그인 시점의 데이터로 통째로 롤백하시겠습니까? (이후 변경사항 모두 취소됨)')) {
+      const snap = localStorage.getItem('kings_shot_snapshot_members');
+      if (snap) {
+        setSaveStatus('saving');
+        const snapMembers = JSON.parse(snap);
+        try {
+          await supabase.from('members').upsert(snapMembers);
+          setMembers(snapMembers);
+          triggerSaveSuccess();
+        } catch(e) {
+          setSaveStatus('');
+        }
+      }
     }
   };
 
@@ -150,7 +192,8 @@ function HeroManager() {
     setSortConfig({ key, direction });
   };
 
-  const sortedMembers = [...members].sort((a, b) => {
+  const filteredMembers = members.filter(m => showTrash ? !!m.deleted_at : !m.deleted_at);
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
     if (sortConfig.key === null) return 0;
     
     let aVal, bVal;
@@ -195,41 +238,58 @@ function HeroManager() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '8px' }}>
-        <div className="tabs" style={{ margin: 0, padding: '4px' }}>
-          <div 
-            className={`tab ${viewMode === 'edit' ? 'active' : ''}`}
-            onClick={() => setViewMode('edit')}
-            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <List size={16} /> {t('viewModeEdit')}
-          </div>
-          <div 
-            className={`tab ${viewMode === 'table' ? 'active' : ''}`}
-            onClick={() => setViewMode('table')}
-            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Table size={16} /> {t('viewModeTable')}
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px', alignItems: 'center' }}>
+        <div>
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className={`btn ${showTrash ? 'btn-primary' : ''}`} onClick={() => { setShowTrash(!showTrash); setViewMode('edit'); }} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
+                {showTrash ? '돌아가기' : '🗑️ 휴지통'}
+              </button>
+              <button className="btn" onClick={handleRollback} style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <RotateCcw size={14} /> 롤백 (스냅샷)
+              </button>
+            </div>
+          )}
         </div>
+        
+        {isAdmin && (
+          <div className="tabs" style={{ margin: 0, padding: '4px' }}>
+            <div 
+              className={`tab ${viewMode === 'edit' ? 'active' : ''}`}
+              onClick={() => { setViewMode('edit'); setShowTrash(false); }}
+              style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <List size={16} /> {t('viewModeEdit')}
+            </div>
+            <div 
+              className={`tab ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Table size={16} /> {t('viewModeTable')}
+            </div>
+          </div>
+        )}
       </div>
 
       {viewMode === 'edit' ? (
         <>
-          <form onSubmit={handleAddMember} className="card" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            <div className="input-group" style={{ margin: 0, flex: 1 }}>
-              <label>{t('memberName')}</label>
-              <input 
-                type="text" 
-                value={newMemberName}
-                onChange={(e) => setNewMemberName(e.target.value)}
-                placeholder="Nickname..."
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ padding: '12px 16px' }}>
-              <Plus size={18} /> {t('addMember')}
-            </button>
-          </form>
+          {isAdmin && !showTrash && (
+            <form onSubmit={handleAddMember} className="card" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+              <div className="input-group" style={{ margin: 0, flex: 1 }}>
+                <label>{t('memberName')}</label>
+                <input 
+                  type="text" 
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="Nickname..."
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ padding: '12px 16px' }}>
+                <Plus size={18} /> {t('addMember')}
+              </button>
+            </form>
+          )}
 
           <div className="members-list">
             {members.length === 0 ? (
@@ -240,11 +300,19 @@ function HeroManager() {
               members.map(member => (
                 <div key={member.id} className="card">
                   <div className="hero-header" onClick={() => toggleExpand(member.id)}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>{member.name}</h3>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{member.name}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <button className="btn-icon" onClick={(e) => handleDeleteMember(member.id, e)}>
-                        <Trash2 size={18} />
-                      </button>
+                      {showTrash ? (
+                        <button className="btn btn-primary" onClick={(e) => handleRestoreMember(member.id, e)} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
+                          ↺ 복구
+                        </button>
+                      ) : (
+                        isAdmin && (
+                          <button className="btn-icon" onClick={(e) => handleDeleteMember(member.id, e)}>
+                            <Trash2 size={18} />
+                          </button>
+                        )
+                      )}
                       {expandedId === member.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                   </div>
@@ -314,13 +382,17 @@ function HeroManager() {
                       style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <input 
-                          type="text" 
-                          value={heroNames[index]}
-                          onChange={(e) => handleNameChange(index, e.target.value)}
-                          onBlur={handleNameBlur}
-                          style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
-                        />
+                        {isAdmin ? (
+                          <input 
+                            type="text" 
+                            value={heroNames[index]}
+                            onChange={(e) => handleNameChange(index, e.target.value)}
+                            onBlur={handleNameBlur}
+                            style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '1rem', width: '80px', padding: '2px', outline: 'none' }}
+                          />
+                        ) : (
+                          <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>{heroNames[index]}</span>
+                        )}
                         <button 
                           className="btn-icon"
                           style={{ padding: '4px', opacity: sortConfig.key === index.toString() ? 1 : 0.3 }}
