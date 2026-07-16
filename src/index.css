@@ -89,6 +89,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .btn:hover {
@@ -327,4 +328,21 @@ table th, table td {
   position: absolute;
   top: 16px;
   right: 16px;
+}
+
+/* Responsive Utilities */
+.hide-on-mobile {
+  display: inline;
+}
+.show-on-mobile {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .show-on-mobile {
+    display: inline !important;
+  }
 }

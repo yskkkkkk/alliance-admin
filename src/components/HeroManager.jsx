@@ -334,7 +334,7 @@ function HeroManager({ isAdmin }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           {isAdmin && (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -356,14 +356,18 @@ function HeroManager({ isAdmin }) {
                 onClick={() => { setViewMode('edit'); setShowTrash(false); }}
                 style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <List size={16} /> {t('viewModeEdit')}
+                <List size={16} /> 
+                <span className="hide-on-mobile">{t('viewModeEdit')}</span>
+                <span className="show-on-mobile">편집</span>
               </div>
               <div 
                 className={`tab ${viewMode === 'table' ? 'active' : ''}`}
                 onClick={() => setViewMode('table')}
                 style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <Table size={16} /> {t('viewModeTable')}
+                <Table size={16} /> 
+                <span className="hide-on-mobile">{t('viewModeTable')}</span>
+                <span className="show-on-mobile">테이블</span>
               </div>
             </div>
           )}
