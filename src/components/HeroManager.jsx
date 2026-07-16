@@ -264,6 +264,9 @@ function HeroManager({ isAdmin }) {
     setExpandedId(expandedId === id ? null : id);
   };
 
+  // 다중 영웅 정렬 (Multi-Hero Sum Sort) 핸들러
+  // 사용자가 테이블 헤더(영웅 이름)를 클릭할 때마다 해당 영웅의 인덱스를 배열에 추가/제거합니다.
+  // 이 배열(multiSortKeys)에 포함된 영웅들의 레벨(보유 수치)을 모두 합산하여 내림차순 정렬의 기준으로 삼습니다.
   const handleSort = (key) => {
     if (key !== 'name') {
       if (multiSortKeys.includes(key)) {
@@ -284,28 +287,32 @@ function HeroManager({ isAdmin }) {
   };
 
   const filteredMembers = members.filter(m => showTrash ? !!m.deleted_at : !m.deleted_at);
-  const sortedMembers = [...filteredMembers].sort((a, b) => {
-    if (sortConfig.key === 'name') {
-      let aVal = a.name.toLowerCase();
-      let bVal = b.name.toLowerCase();
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    }
 
-    if (multiSortKeys.length > 0) {
-      let aSum = 0;
-      let bSum = 0;
-      multiSortKeys.forEach(k => {
-        const index = parseInt(k);
-        aSum += (parseInt(a.heroes[index]) || 0);
-        bSum += (parseInt(b.heroes[index]) || 0);
-      });
-      return bSum - aSum;
-    }
+  // members 배열을 multiSortKeys 기준으로 정렬하는 로직 (기본값: name 오름차순, 선택 시: 합산값 내림차순)
+  const sortedMembers = React.useMemo(() => {
+    return [...filteredMembers].sort((a, b) => {
+      if (sortConfig.key === 'name') {
+        let aVal = a.name.toLowerCase();
+        let bVal = b.name.toLowerCase();
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
 
-    return 0;
-  });
+      // 정렬 기준으로 선택된 영웅(컬럼)이 1개 이상일 경우, 선택된 모든 영웅의 레벨(수치)을 합산합니다.
+      if (multiSortKeys.length > 0) {
+        const sumA = multiSortKeys.reduce((sum, key) => sum + (Number(a.heroes[key]) || 0), 0);
+        const sumB = multiSortKeys.reduce((sum, key) => sum + (Number(b.heroes[key]) || 0), 0);
+        
+        // 합산값이 다르면 내림차순(합산값이 큰 유저가 상위)으로 정렬합니다.
+        if (sumA !== sumB) {
+          return sumB - sumA;
+        }
+      }
+      // 선택된 영웅이 없거나 합산값이 동일한 경우, 연맹원 닉네임(name)을 가나다(알파벳) 순으로 정렬합니다.
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredMembers, multiSortKeys, sortConfig]);
 
   if (isLoading) {
     return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
