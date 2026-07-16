@@ -334,15 +334,15 @@ function HeroManager({ isAdmin }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px', alignItems: 'center' }}>
         <div>
           {isAdmin && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className={`btn ${showTrash ? 'btn-primary' : ''}`} onClick={() => { setShowTrash(!showTrash); setViewMode('edit'); }} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                {showTrash ? '돌아가기' : '🗑️ 휴지통'}
+                {showTrash ? '돌아가기' : <>🗑️ <span className="hide-on-mobile">휴지통</span></>}
               </button>
               <button className="btn" onClick={handleRollback} style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <RotateCcw size={14} /> 롤백
+                <RotateCcw size={14} /> <span className="hide-on-mobile">롤백</span>
               </button>
             </div>
           )}
