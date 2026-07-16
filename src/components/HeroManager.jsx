@@ -250,7 +250,15 @@ function HeroManager() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
                   <th 
-                    style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}
+                    style={{ 
+                      padding: '12px 16px', 
+                      whiteSpace: 'nowrap',
+                      position: 'sticky',
+                      left: 0,
+                      backgroundColor: 'var(--bg-tertiary)',
+                      zIndex: 10,
+                      boxShadow: '1px 0 0 0 var(--border-color)'
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
@@ -293,7 +301,19 @@ function HeroManager() {
               <tbody>
                 {sortedMembers.map((member, i) => (
                   <tr key={member.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'transparent' : 'var(--bg-tertiary)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 500 }}>{member.name}</td>
+                    <td 
+                    style={{ 
+                      padding: '12px 16px', 
+                      position: 'sticky', 
+                      left: 0, 
+                      backgroundColor: i % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-tertiary)', 
+                      zIndex: 5,
+                      fontWeight: 600,
+                      boxShadow: '1px 0 0 0 var(--border-color)'
+                    }}
+                  >
+                    {member.name}
+                  </td>
                     {member.heroes.map((level, index) => (
                       <td key={index} style={{ padding: '12px 16px', color: level ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                         {level || '-'}
