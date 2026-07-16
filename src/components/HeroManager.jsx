@@ -8,30 +8,45 @@ import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../supabaseClient';
 
 const fetchHeroData = async () => {
-  const [{ data: membersData, error: mError }, { data: metaData }] = await Promise.all([
-    supabase.from('members').select('*').order('order_idx', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }),
-    supabase.from('metadata').select('*').eq('key', 'hero_names').single()
-  ]);
+  try {
+    const [{ data: membersData, error: mError }, { data: metaData }] = await Promise.all([
+      supabase.from('members').select('*').order('order_idx', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }),
+      supabase.from('metadata').select('*').eq('key', 'hero_names').single()
+    ]);
 
-  if (mError) throw mError;
+    if (mError) throw mError;
 
-  let parsedMembers = [];
-  if (membersData) {
-    parsedMembers = membersData.map(m => ({
-      ...m,
-      heroes: typeof m.heroes === 'string' ? JSON.parse(m.heroes) : m.heroes
-    }));
-  }
+    let parsedMembers = [];
+    if (membersData) {
+      parsedMembers = membersData.map(m => ({
+        ...m,
+        heroes: typeof m.heroes === 'string' ? JSON.parse(m.heroes) : m.heroes
+      }));
+    }
 
-  let parsedNames = ['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6'];
-  if (metaData && metaData.value) {
-    parsedNames = typeof metaData.value === 'string' ? JSON.parse(metaData.value) : metaData.value;
-  } else {
+    let parsedNames = ['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6'];
+    if (metaData && metaData.value) {
+      parsedNames = typeof metaData.value === 'string' ? JSON.parse(metaData.value) : metaData.value;
+    } else {
+      const savedNames = localStorage.getItem('kings_shot_hero_names');
+      if (savedNames) parsedNames = JSON.parse(savedNames);
+    }
+
+    return { members: parsedMembers, heroNames: parsedNames };
+  } catch (err) {
+    console.error("Failed to fetch data:", err);
+    let parsedMembers = [];
+    const saved = localStorage.getItem('kings_shot_members');
+    if (saved) {
+      try { parsedMembers = JSON.parse(saved); } catch(e) {}
+    }
+    let parsedNames = ['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6'];
     const savedNames = localStorage.getItem('kings_shot_hero_names');
-    if (savedNames) parsedNames = JSON.parse(savedNames);
+    if (savedNames) {
+      try { parsedNames = JSON.parse(savedNames); } catch(e) {}
+    }
+    return { members: parsedMembers, heroNames: parsedNames };
   }
-
-  return { members: parsedMembers, heroNames: parsedNames };
 };
 
 function SortableMemberItem({ member, children, isAdmin, showTrash }) {
@@ -64,7 +79,6 @@ function HeroManager({ isAdmin }) {
   const [viewMode, setViewMode] = useState('table');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [heroNames, setHeroNames] = useState(['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6']);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
   const [showTrash, setShowTrash] = useState(false);
 

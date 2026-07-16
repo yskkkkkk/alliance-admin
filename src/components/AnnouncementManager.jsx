@@ -5,15 +5,24 @@ import useSWR from 'swr';
 import { supabase } from '../supabaseClient';
 
 const fetchAnnouncements = async () => {
-  const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data.map(ann => ({
-    id: ann.id,
-    title: ann.title || '',
-    contentKo: ann.contentKo || ann.content_ko || '',
-    contentEn: ann.contentEn || ann.content_en || '',
-    deleted_at: ann.deleted_at
-  }));
+  try {
+    const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data.map(ann => ({
+      id: ann.id,
+      title: ann.title || '',
+      contentKo: ann.contentKo || ann.content_ko || '',
+      contentEn: ann.contentEn || ann.content_en || '',
+      deleted_at: ann.deleted_at
+    }));
+  } catch (err) {
+    console.error("Failed to fetch announcements:", err);
+    const saved = localStorage.getItem('kings_shot_announcements');
+    if (saved) {
+      try { return JSON.parse(saved); } catch(e) {}
+    }
+    return [];
+  }
 };
 
 function AnnouncementManager({ isAdmin }) {
@@ -21,7 +30,6 @@ function AnnouncementManager({ isAdmin }) {
   const [announcements, setAnnouncements] = useState([]);
   const [copiedId, setCopiedId] = useState({ id: null, lang: null });
   const [expandedId, setExpandedId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
   const [showTrash, setShowTrash] = useState(false);
 
