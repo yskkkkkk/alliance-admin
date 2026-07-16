@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Plus, Trash2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import useSWR from 'swr';
 import { supabase } from '../supabaseClient';
+
+const fetchAnnouncements = async () => {
+  const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(ann => ({
+    id: ann.id,
+    title: ann.title || '',
+    contentKo: ann.contentKo || ann.content_ko || '',
+    contentEn: ann.contentEn || ann.content_en || '',
+    deleted_at: ann.deleted_at
+  }));
+};
 
 function AnnouncementManager({ isAdmin }) {
   const { t } = useTranslation();
@@ -21,41 +34,13 @@ function AnnouncementManager({ isAdmin }) {
     setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  // Load from Supabase on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('announcements')
-          .select('*')
-          .order('created_at', { ascending: false });
+  const { data: dbAnns, isLoading } = useSWR('announcements', fetchAnnouncements, { refreshInterval: 0 });
 
-        if (error) throw error;
-        if (data) {
-          const mappedData = data.map(ann => ({
-            id: ann.id,
-            title: ann.title || '',
-            contentKo: ann.contentKo || ann.content_ko || '',
-            contentEn: ann.contentEn || ann.content_en || '',
-            deleted_at: ann.deleted_at
-          }));
-          setAnnouncements(mappedData);
-        }
-      } catch (e) {
-        console.error("Failed to fetch announcements:", e);
-        // Fallback to local storage
-        const saved = localStorage.getItem('kings_shot_announcements');
-        if (saved) {
-          try {
-            setAnnouncements(JSON.parse(saved));
-          } catch(err) {}
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  useEffect(() => {
+    if (dbAnns) {
+      setAnnouncements(dbAnns);
+    }
+  }, [dbAnns]);
 
   const handleAdd = async () => {
     const newId = Date.now().toString();

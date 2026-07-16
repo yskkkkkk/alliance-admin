@@ -1,7 +1,60 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown, RotateCcw, GripVertical } from 'lucide-react';
+import useSWR from 'swr';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../supabaseClient';
+
+const fetchHeroData = async () => {
+  const [{ data: membersData, error: mError }, { data: metaData }] = await Promise.all([
+    supabase.from('members').select('*').order('order_idx', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }),
+    supabase.from('metadata').select('*').eq('key', 'hero_names').single()
+  ]);
+
+  if (mError) throw mError;
+
+  let parsedMembers = [];
+  if (membersData) {
+    parsedMembers = membersData.map(m => ({
+      ...m,
+      heroes: typeof m.heroes === 'string' ? JSON.parse(m.heroes) : m.heroes
+    }));
+  }
+
+  let parsedNames = ['Hero 1', 'Hero 2', 'Hero 3', 'Hero 4', 'Hero 5', 'Hero 6'];
+  if (metaData && metaData.value) {
+    parsedNames = typeof metaData.value === 'string' ? JSON.parse(metaData.value) : metaData.value;
+  } else {
+    const savedNames = localStorage.getItem('kings_shot_hero_names');
+    if (savedNames) parsedNames = JSON.parse(savedNames);
+  }
+
+  return { members: parsedMembers, heroNames: parsedNames };
+};
+
+function SortableMemberItem({ member, children, isAdmin, showTrash }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: member.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 100 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="card">
+      {isAdmin && !showTrash && (
+        <div {...attributes} {...listeners} style={{ position: 'absolute', top: '12px', left: '-12px', cursor: 'grab', padding: '4px', display: 'flex', alignItems: 'center' }}>
+          <GripVertical size={16} color="var(--text-secondary)" />
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
 
 function HeroManager({ isAdmin }) {
   const { t } = useTranslation();
@@ -35,49 +88,39 @@ function HeroManager({ isAdmin }) {
     setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  // Fetch data from Supabase
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('members')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) throw error;
-        if (data) {
-          // parse heroes if it's stringified, though supabase jsonb returns object/array
-          const parsedData = data.map(m => ({
-            ...m,
-            heroes: typeof m.heroes === 'string' ? JSON.parse(m.heroes) : m.heroes
-          }));
-          setMembers(parsedData);
-        }
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-        const { data: metaData } = await supabase
-          .from('metadata')
-          .select('*')
-          .eq('key', 'hero_names')
-          .single();
-        
-        if (metaData && metaData.value) {
-          setHeroNames(typeof metaData.value === 'string' ? JSON.parse(metaData.value) : metaData.value);
-        } else {
-          // Fallback to local storage if DB empty
-          const savedNames = localStorage.getItem('kings_shot_hero_names');
-          if (savedNames) setHeroNames(JSON.parse(savedNames));
-        }
-      } catch (e) {
-        console.error("Failed to fetch data:", e);
-        // Fallback to local storage
-        const saved = localStorage.getItem('kings_shot_members');
-        if (saved) setMembers(JSON.parse(saved));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = members.findIndex((m) => m.id === active.id);
+    const newIndex = members.findIndex((m) => m.id === over.id);
+    const newItems = arrayMove(members, oldIndex, newIndex);
+    
+    setMembers(newItems);
+
+    setSaveStatus('saving');
+    try {
+      const updates = newItems.map((item, index) => ({ id: item.id, order_idx: index }));
+      await Promise.all(updates.map(u => supabase.from('members').update({ order_idx: u.order_idx }).eq('id', u.id)));
+      triggerSaveSuccess();
+    } catch (e) {
+      setSaveStatus('');
+    }
+  };
+
+  const { data: dbData, isLoading } = useSWR('heroData', fetchHeroData, { refreshInterval: 0 });
+
+  useEffect(() => {
+    if (dbData) {
+      setMembers(dbData.members);
+      setHeroNames(dbData.heroNames);
+    }
+  }, [dbData]);
 
   const handleNameChange = (index, value) => {
     const newNames = [...heroNames];
@@ -104,10 +147,13 @@ function HeroManager({ isAdmin }) {
       return;
     }
     
+    const maxOrder = members.length > 0 ? Math.max(...members.map(m => m.order_idx || 0)) : 0;
+    
     const newMember = {
       id: Date.now().toString(),
       name: newMemberName.trim(),
-      heroes: Array(6).fill('') 
+      heroes: Array(6).fill(''),
+      order_idx: maxOrder + 1
     };
     
     setMembers([...members, newMember]);
@@ -316,63 +362,67 @@ function HeroManager({ isAdmin }) {
                 {t('noMembers')}
               </div>
             ) : (
-              members.map(member => (
-                <div key={member.id} className="card">
-                  <div className="hero-header" onClick={() => toggleExpand(member.id)}>
-                    {isAdmin && !showTrash ? (
-                      <input 
-                        type="text" 
-                        value={member.name}
-                        onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
-                        onBlur={() => handleMemberNameBlur(member.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ fontSize: '1.05rem', fontWeight: 600, backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', width: '200px' }}
-                      />
-                    ) : (
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{member.name}</h3>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {showTrash ? (
-                        <button className="btn btn-primary" onClick={(e) => handleRestoreMember(member.id, e)} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
-                          ↺ 복구
-                        </button>
-                      ) : (
-                        isAdmin && (
-                          <button className="btn-icon" onClick={(e) => handleDeleteMember(member.id, e)}>
-                            <Trash2 size={18} />
-                          </button>
-                        )
-                      )}
-                      {expandedId === member.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </div>
-                  </div>
-                  
-                  {expandedId === member.id && (
-                    <div className="hero-body animate-fade-in">
-                      <div className="hero-grid">
-                        {member.heroes.map((level, index) => (
-                          <div key={index} className="input-group">
-                            <label>{heroNames[index]}</label>
-                            <input 
-                              type="text" 
-                              inputMode="numeric"
-                              maxLength="1"
-                              value={level}
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/[^1-5]/g, '');
-                                handleHeroChange(member.id, index, val);
-                              }}
-                              onBlur={() => handleHeroBlur(member.id)}
-                              placeholder="성급"
-                              style={{ textAlign: 'center' }}
-                            />
-                          </div>
-                        ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={filteredMembers.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                  {filteredMembers.map(member => (
+                    <SortableMemberItem key={member.id} member={member} isAdmin={isAdmin} showTrash={showTrash}>
+                      <div className="hero-header" onClick={() => toggleExpand(member.id)}>
+                        {isAdmin && !showTrash ? (
+                          <input 
+                            type="text" 
+                            value={member.name}
+                            onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
+                            onBlur={() => handleMemberNameBlur(member.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ fontSize: '1.05rem', fontWeight: 600, backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', outline: 'none', color: 'var(--text-primary)', width: '200px' }}
+                          />
+                        ) : (
+                          <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: showTrash ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{member.name}</h3>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {showTrash ? (
+                            <button className="btn btn-primary" onClick={(e) => handleRestoreMember(member.id, e)} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
+                              ↺ 복구
+                            </button>
+                          ) : (
+                            isAdmin && (
+                              <button className="btn-icon" onClick={(e) => handleDeleteMember(member.id, e)}>
+                                <Trash2 size={18} />
+                              </button>
+                            )
+                          )}
+                          {expandedId === member.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))
+                      
+                      {expandedId === member.id && (
+                        <div className="hero-body animate-fade-in">
+                          <div className="hero-grid">
+                            {member.heroes.map((level, index) => (
+                              <div key={index} className="input-group">
+                                <label>{heroNames[index]}</label>
+                                <input 
+                                  type="text" 
+                                  inputMode="numeric"
+                                  maxLength="1"
+                                  value={level}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/[^1-5]/g, '');
+                                    handleHeroChange(member.id, index, val);
+                                  }}
+                                  onBlur={() => handleHeroBlur(member.id)}
+                                  placeholder="성급"
+                                  style={{ textAlign: 'center' }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </SortableMemberItem>
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </>
