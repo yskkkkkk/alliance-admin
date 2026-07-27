@@ -42,7 +42,11 @@ function AnnouncementManager({ isAdmin }) {
     setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  const { data: dbAnns, isLoading } = useSWR('announcements', fetchAnnouncements, { refreshInterval: 0 });
+  const { data: dbAnns, isLoading } = useSWR('announcements', fetchAnnouncements, { 
+    refreshInterval: 0,
+    revalidateOnFocus: false,
+    dedupingInterval: 60000 
+  });
 
   useEffect(() => {
     if (dbAnns) {

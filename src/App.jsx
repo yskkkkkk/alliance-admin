@@ -8,6 +8,7 @@ import AnnouncementManager from './components/AnnouncementManager';
 function App() {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('heroes'); // 'heroes' | 'announcements'
+  const [hasViewedAnnouncements, setHasViewedAnnouncements] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('kings_shot_theme') || 'light');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('kings_shot_isAdmin') === 'true');
@@ -105,7 +106,10 @@ function App() {
           </div>
           <div 
             className={`tab ${activeTab === 'announcements' ? 'active' : ''}`}
-            onClick={() => setActiveTab('announcements')}
+            onClick={() => {
+              setActiveTab('announcements');
+              setHasViewedAnnouncements(true);
+            }}
           >
             {t('tabAnnouncements')}
           </div>
@@ -116,7 +120,7 @@ function App() {
             <HeroManager isAdmin={isAdmin} />
           </div>
           <div style={{ display: activeTab === 'announcements' ? 'block' : 'none' }}>
-            <AnnouncementManager isAdmin={isAdmin} />
+            {hasViewedAnnouncements && <AnnouncementManager isAdmin={isAdmin} />}
           </div>
         </div>
       </main>

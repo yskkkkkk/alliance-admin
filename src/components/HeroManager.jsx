@@ -128,7 +128,11 @@ function HeroManager({ isAdmin }) {
     }
   };
 
-  const { data: dbData, isLoading } = useSWR('heroData', fetchHeroData, { refreshInterval: 0 });
+  const { data: dbData, isLoading } = useSWR('heroData', fetchHeroData, { 
+    refreshInterval: 0,
+    revalidateOnFocus: false,
+    dedupingInterval: 60000
+  });
 
   useEffect(() => {
     if (dbData) {
