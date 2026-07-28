@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Plus, Trash2, List, Table, ArrowUpDown, RotateCcw, GripVertical } from 'lucide-react';
 import useSWR from 'swr';
@@ -293,7 +293,7 @@ function HeroManager({ isAdmin }) {
   const filteredMembers = members.filter(m => showTrash ? !!m.deleted_at : !m.deleted_at);
 
   // members 배열을 multiSortKeys 기준으로 정렬하는 로직 (기본값: name 오름차순, 선택 시: 합산값 내림차순)
-  const sortedMembers = React.useMemo(() => {
+  const sortedMembers = useMemo(() => {
     return [...filteredMembers].sort((a, b) => {
       if (sortConfig.key === 'name') {
         let aVal = a.name.toLowerCase();
