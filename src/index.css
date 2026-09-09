@@ -357,3 +357,109 @@ table th, table td {
     display: inline !important;
   }
 }
+
+/* Sunset Notice Page (Restrained, Non-AI-slop) */
+.sunset-card {
+  width: 100%;
+  max-width: 520px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 32px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sunset-header {
+  margin-bottom: 20px;
+}
+
+.sunset-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.sunset-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.sunset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.sunset-info-box {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.sunset-info-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sunset-info-header svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.sunset-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.825rem;
+}
+
+.sunset-metadata div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sunset-metadata dt {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.sunset-metadata dd {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  word-break: keep-all;
+}
+
+.sunset-footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
